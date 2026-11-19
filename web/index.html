@@ -90,7 +90,14 @@ input::placeholder,textarea::placeholder{color:#c5cad3;opacity:1}
 .admin .row{display:flex;gap:6px;margin-top:8px}.admin input{flex:1;min-width:0;border:1px solid var(--line);border-radius:10px;padding:9px 10px;font:inherit;font-size:14px;background:#f9fafb;color:var(--ink)}
 .admin button{border:0;border-radius:10px;padding:9px 14px;font:inherit;font-size:13px;font-weight:800;color:#fff;background:#374151;cursor:pointer;flex:none}
 .admin [hidden]{display:none}
-@media (prefers-reduced-motion:reduce){.snow,.sp,.orn,.hang{animation:none}}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid rgba(255,224,102,.35);border-top-color:#ffe066;border-radius:50%;animation:rot .8s linear infinite;vertical-align:-1px;margin-right:6px}
+@keyframes rot{to{transform:rotate(360deg)}}
+.stage .ld{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:3;display:flex;align-items:center;color:#fff;font-size:12.5px;font-weight:700;background:rgba(15,23,42,.6);padding:6px 13px;border-radius:99px;white-space:nowrap}
+.skel{background:#fff;border-radius:16px;border-left:5px solid var(--line);padding:14px;margin-bottom:12px;box-shadow:0 3px 10px rgba(0,0,0,.05)}
+.skel i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#eef1f5 25%,#f8fafc 50%,#eef1f5 75%);background-size:200% 100%;animation:shim 1.2s linear infinite}
+.skel i+i{margin-top:10px}
+@keyframes shim{to{background-position:-200% 0}}
+@media (prefers-reduced-motion:reduce){.snow,.sp,.orn,.hang,.skel i{animation:none}}
 </style>
 </head>
 <body>
@@ -100,10 +107,10 @@ input::placeholder,textarea::placeholder{color:#c5cad3;opacity:1}
   <span class="sp" style="top:10px;left:84px">❄</span><span class="sp" style="top:30px;left:56%;animation-delay:.8s">✦</span><span class="sp" style="top:96px;left:40%;animation-delay:1.4s">✦</span>
   <span class="pill">🎄 오월드 청렴 문화 확산 캠페인</span>
   <div class="hrow"><div><h1>오월드 청렴 트리 🎁</h1><p>따뜻한 연말, 오월드 트리에 청렴 한 줄을 걸어주세요</p></div><div class="crew" id="crew"></div></div>
-  <div class="live"><span><i class="dot"></i>실시간 참여현황</span><em id="total">총 0개의 청렴 오너먼트 🎄</em></div>
+  <div class="live"><span><i class="dot"></i>실시간 참여현황</span><em id="total"><i class="spin"></i>불러오는 중…</em></div>
 </header>
 <div id="banner" class="note" style="margin:8px 18px 0"></div>
-<div class="tabs"><button data-t="write" class="on">✍️ 한 줄 걸기</button><button data-t="tree" id="treeTab">🎄 청렴 트리 (0)</button></div>
+<div class="tabs"><button data-t="write" class="on">✍️ 한 줄 걸기</button><button data-t="tree" id="treeTab">🎄 청렴 트리 (…)</button></div>
 
 <section id="s-write" class="on">
   <div class="pick"><div class="pickhead"><span>🎅 내 청렴 한 줄을 걸어줄 캐릭터 선택</span><span>터치하세요!</span></div><div class="chars" id="chars"></div></div>
@@ -146,7 +153,7 @@ const KWS=[["🎄","기본과원칙"],["🎁","상호존중"],["✨","공정투�
 const SLOTS=[[50,22],[38,34],[62,34],[28,48],[50,44],[72,48],[24,62],[42,58],[60,58],[76,62],[34,72],[66,72]];
 const API=(window.API_BASE||"").replace(/\/$/,"");
 const TK="cr_token",ATK="cr_admin_token";
-let MAX=10,me={uid:null,isAdmin:false},online=false,selCh=0,selKw=null,busy=false,lines=[];
+let MAX=10,me={uid:null,isAdmin:false},online=false,loading=true,selCh=0,selKw=null,busy=false,lines=[];
 const $=s=>document.querySelector(s);
 const el=(t,c,x)=>{const n=document.createElement(t);if(c)n.className=c;if(x!=null)n.textContent=x;return n;};
 const store={get:k=>{try{return localStorage.getItem(k);}catch(e){return null;}},set:(k,v)=>{try{v==null?localStorage.removeItem(k):localStorage.setItem(k,v);}catch(e){}}};
@@ -180,7 +187,7 @@ async function auth(){
   if(token()){try{const m=await api("/me",{},false);me={uid:m.uid,isAdmin:m.isAdmin};MAX=m.maxPerUser||MAX;return;}catch(e){if(e.status!==401)throw e;store.set(ATK,null);store.set(TK,null);}}
   const a=await api("/auth/anon",{method:"POST"});store.set(TK,a.token);me={uid:a.uid,isAdmin:false};}
 async function load(){
-  const d=await api("/lines");lines=d.lines.map(e=>({...e,ch:chOf(e.ch)}));MAX=d.maxPerUser||MAX;renderAll();}
+  const d=await api("/lines");lines=d.lines.map(e=>({...e,ch:chOf(e.ch)}));MAX=d.maxPerUser||MAX;loading=false;renderAll();}
 let loadT=null;
 function reload(){clearTimeout(loadT);loadT=setTimeout(()=>load().catch(()=>{}),200);}
 
@@ -190,14 +197,20 @@ function renderForm(){
   CH.forEach((n,i)=>{const b=el("button","ch"+(selCh===i?" on":"")),w=el("div","im"),im=el("img");im.src=IMGS[i];w.appendChild(im);b.append(w,el("b","",n));b.onclick=()=>{selCh=i;renderForm();};c.appendChild(b);});
   const k=$("#kws");k.textContent="";
   KWS.forEach(([e,n])=>{const b=el("button","kw"+(selKw===n?" on":""),e+" #"+n);b.onclick=()=>{selKw=selKw===n?null:n;renderForm();};k.appendChild(b);});
+  if(loading){$("#limitNote").textContent="참여 현황을 불러오는 중이에요…";check();return;}
   const left=MAX-myCount();
   $("#limitNote").textContent=left>0?"남은 기회 "+left+"번 (1인 최대 "+MAX+"개)":"오너먼트를 모두 걸었어요! 청렴 트리에서 동료들의 한 줄을 구경해보세요 🎄";
   check();}
-function check(){$("#go").disabled=busy||!($("#ta").value.trim()&&myCount()<MAX);}
+function check(){$("#go").disabled=loading||busy||!($("#ta").value.trim()&&myCount()<MAX);}
 function renderTree(){
-  const list=lines,box=$("#stageBox");
+  const list=lines,box=$("#stageBox");box.querySelectorAll(".orn,.ld").forEach(n=>n.remove());
+  if(loading){
+    const T=$("#total");T.textContent="";T.append(el("i","spin"),"불러오는 중…");$("#treeTab").textContent="🎄 청렴 트리 (…)";
+    $("#treeSvg").innerHTML=treeSvg(300);const ld=el("div","ld");ld.append(el("i","spin"),"오너먼트를 불러오는 중…");box.appendChild(ld);
+    const L=$("#list");L.textContent="";for(let i=0;i<3;i++){const k=el("div","skel");["38%","92%","64%"].forEach(w=>{const b=el("i");b.style.width=w;k.appendChild(b);});L.appendChild(k);}
+    return;}
   $("#total").textContent="총 "+list.length+"개의 청렴 오너먼트 🎄";$("#treeTab").textContent="🎄 청렴 트리 ("+list.length+")";
-  $("#treeSvg").innerHTML=treeSvg(300);box.querySelectorAll(".orn").forEach(n=>n.remove());
+  $("#treeSvg").innerHTML=treeSvg(300);
   list.slice(0,SLOTS.length).forEach((e,i)=>{const b=el("button","orn"),im=el("img");im.src=IMGS[e.ch];b.append(im,el("span","",e.t));
     b.style.left=SLOTS[i][0]+"%";b.style.top=SLOTS[i][1]+"%";b.style.animationDelay=(-i*.45)+"s";b.onclick=()=>toast(CH[e.ch]+" · "+e.nick+": "+e.t);box.appendChild(b);});
   const L=$("#list");L.textContent="";const s=[...list];if($("#sort").value==="like")s.sort((a,b)=>b.hearts-a.hearts||b.ts-a.ts);
@@ -252,7 +265,7 @@ for(let i=0;i<28;i++){const s=el("i","","❄");s.style.left=Math.random()*100+"%
   renderAll();
   const timer=setTimeout(()=>{$("#banner").textContent="데이터를 불러오는 중이에요. 네트워크를 확인해주세요.";},10000);
   try{await auth();await load();online=true;$("#banner").textContent="";}
-  catch(e){$("#banner").textContent="미리보기 모드: 서버에 연결하지 못했어요. 작성한 내용은 이 화면에만 보여요.";return;}
+  catch(e){loading=false;renderAll();$("#banner").textContent="미리보기 모드: 서버에 연결하지 못했어요. 작성한 내용은 이 화면에만 보여요.";return;}
   finally{clearTimeout(timer);}
   // 실시간 반영: SSE 로 변경 알림 → 다시 불러오기. 끊겨도 30초마다 갱신
   try{const es=new EventSource(API+"/api/events");es.addEventListener("change",reload);}catch(e){}
