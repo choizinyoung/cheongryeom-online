@@ -1,0 +1,13 @@
+{
+  "name": "cheongryeom-oneline-web",
+  "version": "1.0.0",
+  "private": true,
+  "description": "오월드 청렴 트리 프론트",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
